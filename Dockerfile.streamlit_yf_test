@@ -1,0 +1,12 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY streamlit_yf_test.py .
+
+EXPOSE 8504
+
+ENTRYPOINT ["streamlit", "run", "streamlit_yf_test.py", "--server.port=8504", "--server.address=0.0.0.0"] 

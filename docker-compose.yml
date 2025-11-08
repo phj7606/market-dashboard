@@ -1,0 +1,12 @@
+version: '3'
+services:
+  dashboard3:
+    build: .
+    ports:
+      - "8503:8503"
+    command: streamlit run dashboard3.py --server.port=8503 --server.address=0.0.0.0
+    volumes:
+      - .:/app
+    environment:
+      - TZ=Asia/Seoul
+    restart: unless-stopped 

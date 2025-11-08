@@ -1,0 +1,13 @@
+version: '3'
+services:
+  dashboard2:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard2
+    ports:
+      - "8502:8502"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped 
