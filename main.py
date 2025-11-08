@@ -18,7 +18,7 @@ st.set_page_config(
     page_title="Market Analysis Dashboard",
     page_icon="",
     layout="wide",
-    initial_sidebar_state="collapsed"  # 모바일에서 사이드바 접힌 상태로 시작
+    initial_sidebar_state="expanded"  # 사이드바가 열린 상태로 시작
 )
 
 # FRED API 키 가져오기 (환경 변수 우선, 없으면 기본값 사용)
