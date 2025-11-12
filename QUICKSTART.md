@@ -84,3 +84,6 @@ Streamlit Cloud가 자동으로 재배포합니다 (약 1-2분 소요).
 - **자동 업데이트**: GitHub에 푸시하면 자동으로 재배포
 - **API 키 보안**: API 키는 Streamlit Cloud의 Secrets에 안전하게 저장됨
 
+
+
+

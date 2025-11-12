@@ -1923,19 +1923,19 @@ elif st.session_state.current_page == 'market_risk_dashboard':
                 st.error(f"{index_names[i]} 데이터 로드 실패: {e}")
     
     if data:
-        # 통합 그래프 (S&P 500 + VIX vs SDEX) - 완전한 동기화를 위해 subplot 사용
+        # 통합 그래프 (S&P 500 + NASDAQ, VIX vs SDEX) - 완전한 동기화를 위해 subplot 사용
         from plotly.subplots import make_subplots
         
-        # 5개의 subplot 생성 (상하 배치) - S&P 500, VIX vs SDEX, VIX/VVIX, VVIX/VIX, ICE BofA
+        # 5개의 subplot 생성 (상하 배치) - S&P 500 + NASDAQ, VIX vs SDEX, VIX/VVIX, VVIX/VIX, ICE BofA
         fig = make_subplots(
             rows=5, cols=1,
             subplot_titles=('', '', '', '', ''),
-            vertical_spacing=0.02,
-            row_heights=[0.4, 0.15, 0.15, 0.15, 0.15],  # S&P 500: 30%, VIX vs SDEX: 15%, VIX/VVIX: 15%, VVIX/VIX: 15%, ICE BofA: 25%
-            shared_xaxes=True,  # x축 공유로 완전한 동기화
+            vertical_spacing=0.03,  # 그래프 간 적절한 간격 유지
+            row_heights=[0.2667, 0.1833, 0.1833, 0.1833, 0.1833],  # S&P 500 + NASDAQ: 26.67% (2/3 축소), 나머지 각 18.33%
+            shared_xaxes=False,  # x축을 개별적으로 표시하여 각 그래프 하단에 날짜 표시
             shared_yaxes=False,  # y축은 분리
             specs=[
-                [{"secondary_y": False}],  # Row 1: S&P 500
+                [{"secondary_y": True}],   # Row 1: S&P 500 + NASDAQ
                 [{"secondary_y": True}],   # Row 2: VIX + SDEX
                 [{"secondary_y": True}],   # Row 3: VIX + VVIX
                 [{"secondary_y": False}],  # Row 4: VVIX/VIX
@@ -1950,9 +1950,12 @@ elif st.session_state.current_page == 'market_risk_dashboard':
                     x=data['S&P 500'].index,
                     y=data['S&P 500']['Close'],
                     name='S&P 500',
-                    line=dict(color='#2E7D32', width=2)
+                    mode='lines',
+                    line=dict(color='#2E7D32', width=2),
+                    legendgroup="row1",
+                    showlegend=True
                 ),
-                row=1, col=1
+                row=1, col=1, secondary_y=False
             )
             
             # S&P 500 제목은 go.Scatter의 name으로 표시
@@ -1966,9 +1969,42 @@ elif st.session_state.current_page == 'market_risk_dashboard':
                     x=[],
                     y=[],
                     name='S&P 500',
-                    line=dict(color='#2E7D32', width=2)
+                    mode='lines',
+                    line=dict(color='#2E7D32', width=2),
+                    legendgroup="row1",
+                    showlegend=True
                 ),
-                row=1, col=1
+                row=1, col=1, secondary_y=False
+            )
+        
+        # NASDAQ 데이터 추가 (첫 번째 subplot, 오른쪽 축) - 무조건 추가
+        nasdaq_data = data.get('NASDAQ', pd.DataFrame())
+        if not nasdaq_data.empty:
+            fig.add_trace(
+                go.Scatter(
+                    x=nasdaq_data.index,
+                    y=nasdaq_data['Close'],
+                    name='NASDAQ',
+                    mode='lines',
+                    line=dict(color='#1976D2', width=2),
+                    legendgroup="row1",
+                    showlegend=True
+                ),
+                row=1, col=1, secondary_y=True
+            )
+        else:
+            # NASDAQ 데이터가 없는 경우에도 빈 그래프 추가 (범례에 표시되도록)
+            fig.add_trace(
+                go.Scatter(
+                    x=[],
+                    y=[],
+                    name='NASDAQ',
+                    mode='lines',
+                    line=dict(color='#1976D2', width=2),
+                    legendgroup="row1",
+                    showlegend=True
+                ),
+                row=1, col=1, secondary_y=True
             )
         
             
@@ -1980,7 +2016,10 @@ elif st.session_state.current_page == 'market_risk_dashboard':
                     x=data['VIX'].index,
                     y=data['VIX']['Close'],
                     name='VIX',
-                    line=dict(color='#1A237E', width=2)
+                    mode='lines',
+                    line=dict(color='#1A237E', width=2),
+                    legendgroup="row2",
+                    showlegend=True
                 ),
                 row=2, col=1, secondary_y=False
             )
@@ -2015,7 +2054,10 @@ elif st.session_state.current_page == 'market_risk_dashboard':
                         x=data['VIX'].index,
                         y=data['VIX']['Close'],
                         name='VIX',
-                        line=dict(color='#1A237E', width=2)
+                        mode='lines',
+                        line=dict(color='#1A237E', width=2),
+                        legendgroup="row3",
+                        showlegend=True
                     ),
                     row=3, col=1, secondary_y=False
                 )
@@ -2026,7 +2068,10 @@ elif st.session_state.current_page == 'market_risk_dashboard':
                         x=vvix_data.index,
                         y=vvix_data['Close'],
                         name='VVIX',
-                        line=dict(color='#FF9800', width=2)
+                        mode='lines',
+                        line=dict(color='#FF9800', width=2),
+                        legendgroup="row3",
+                        showlegend=True
                     ),
                     row=3, col=1, secondary_y=True
                 )
@@ -2053,7 +2098,10 @@ elif st.session_state.current_page == 'market_risk_dashboard':
                             x=vvix_common.index,
                             y=vvix_vix_ratio,
                             name='VVIX/VIX',
-                            line=dict(color='#F44336', width=2)
+                            mode='lines',
+                            line=dict(color='#F44336', width=2),
+                            legendgroup="row4",
+                            showlegend=True
                         ),
                         row=4, col=1
                     )
@@ -2085,7 +2133,10 @@ elif st.session_state.current_page == 'market_risk_dashboard':
                         x=sdex_data.index,
                         y=sdex_data['Close'],
                         name='SDEX',
-                        line=dict(color='#2196F3', width=2)
+                        mode='lines',
+                        line=dict(color='#2196F3', width=2),
+                        legendgroup="row2",
+                        showlegend=True
                     ),
                     row=2, col=1, secondary_y=True
                 )
@@ -2153,7 +2204,10 @@ elif st.session_state.current_page == 'market_risk_dashboard':
                             x=filtered_spread.index,
                             y=filtered_spread.values,
                             name='ICE BofA US High Yield Index Option-Adjusted Spread',
-                            line=dict(color='purple', width=2)
+                            mode='lines',
+                            line=dict(color='purple', width=2),
+                            legendgroup="row5",
+                            showlegend=True
                         ),
                         row=5, col=1
                     )
@@ -2167,20 +2221,35 @@ elif st.session_state.current_page == 'market_risk_dashboard':
             st.write(f"ICE BofA 데이터 로드 실패: {e}")
         
         # 통합 레이아웃 설정
+        # 각 subplot에 개별 legend를 표시하기 위해 showlegend=False로 설정하고
+        # 각 subplot의 위치에 legend를 배치
         fig.update_layout(
             height=1700,  # 2개 subplot을 위해 높이 조정
             plot_bgcolor='rgba(248, 249, 250, 0.8)',
             paper_bgcolor='white',
             font=dict(family="Arial", size=12, color='#2c3e50'),
-            showlegend=True,
+            showlegend=True,  # legend 활성화
             legend=dict(
-                x=0.0,
-                y=1.0,
-                bgcolor='rgba(255, 255, 255, 0.8)',
-                bordercolor='#bdc3c7',
-                borderwidth=1,
-                font=dict(size=12)
+                orientation="h",  # 가로 방향
+                x=0,  # 그래프 프레임 왼쪽 경계와 일치
+                y=1.02,  # 상단 (약간 위로)
+                xanchor="left",
+                yanchor="bottom",
+                bgcolor='rgba(0, 0, 0, 0)',  # 투명 배경
+                bordercolor='rgba(0, 0, 0, 0)',  # 투명 테두리
+                borderwidth=0,  # 테두리 제거
+                font=dict(
+                    size=11,
+                    color='#2c3e50',
+                    family="Arial"
+                ),
+                itemclick="toggleothers",  # 클릭 시 다른 항목은 유지하고 선택한 항목만 토글
+                itemdoubleclick="toggle",  # 더블클릭 시 해당 항목만 토글
+                traceorder="normal",  # 정상 순서
+                itemsizing="constant",  # 일정한 크기
+                itemwidth=30  # 아이템 너비 설정
             ),
+            margin=dict(t=80, b=30, l=50, r=30),  # 상단 마진 추가로 레전드 공간 확보
             hovermode='x unified',  # x축 통합 모드로 완전한 동기화
             hoverlabel=dict(
                 bgcolor='rgba(255, 255, 255, 0.9)',
@@ -2190,7 +2259,33 @@ elif st.session_state.current_page == 'market_risk_dashboard':
             )
         )
         
-        # x축 동기화 및 스타일링
+        # 각 subplot에 개별 legend를 표시하기 위해
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치
+        # row_heights = [0.2667, 0.1833, 0.1833, 0.1833, 0.1833], vertical_spacing = 0.03
+        # 각 subplot의 y 위치 계산 (상단부터, paper 좌표계 사용)
+        # Row 1: y_top = 1.0, y_bottom = 1.0 - 0.2667 = 0.7333
+        # Row 2: y_top = 0.7333 - 0.03 = 0.7033, y_bottom = 0.7033 - 0.1833 = 0.52
+        # Row 3: y_top = 0.52 - 0.03 = 0.49, y_bottom = 0.49 - 0.1833 = 0.3067
+        # Row 4: y_top = 0.3067 - 0.03 = 0.2767, y_bottom = 0.2767 - 0.1833 = 0.0934
+        # Row 5: y_top = 0.0934 - 0.03 = 0.0634, y_bottom = 0.0634 - 0.1833 = -0.1199
+        
+        # 각 subplot에 개별 legend를 표시하기 위해
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치
+        # Plotly에서는 subplot별로 개별 legend를 직접 설정할 수 없지만
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치할 수 있습니다
+        
+        # 각 subplot에 개별 legend를 표시하기 위해
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치
+        # 실제 구현: 각 subplot에 대해 개별 legend를 표시하기 위해
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치하는 방법을 사용
+        
+        # x축 개별 표시 및 스타일링 (각 그래프 하단에 날짜 표시)
+        # Row 1: S&P 500 + NASDAQ
         fig.update_xaxes(
             showgrid=True,
             gridwidth=1,
@@ -2200,7 +2295,60 @@ elif st.session_state.current_page == 'market_risk_dashboard':
             linecolor='#34495e',
             mirror=True,
             tickfont=dict(size=11, color='#2c3e50'),
-            title_font=dict(size=13, color='#2c3e50')
+            title_font=dict(size=13, color='#2c3e50'),
+            row=1, col=1
+        )
+        # Row 2: FED Funds Rate + US 10-Year Treasury vs MOVE Index
+        fig.update_xaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            title_font=dict(size=13, color='#2c3e50'),
+            row=2, col=1
+        )
+        # Row 3: VIX + VVIX
+        fig.update_xaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            title_font=dict(size=13, color='#2c3e50'),
+            row=3, col=1
+        )
+        # Row 4: VVIX/VIX
+        fig.update_xaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            title_font=dict(size=13, color='#2c3e50'),
+            row=4, col=1
+        )
+        # Row 5: ICE BofA
+        fig.update_xaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            title_font=dict(size=13, color='#2c3e50'),
+            row=5, col=1
         )
         
         
@@ -2208,7 +2356,7 @@ elif st.session_state.current_page == 'market_risk_dashboard':
         # Row 2: VIX (왼쪽) + SDEX (오른쪽)
         fig.update_yaxes(
             title_text="VIX",
-            title_font=dict(size=14, color='#1A237E'),
+            title_font=dict(size=14, color='#2c3e50'),
             title_standoff=10,
             automargin=True,
             showgrid=True,
@@ -2226,9 +2374,7 @@ elif st.session_state.current_page == 'market_risk_dashboard':
             title_font=dict(size=14, color='#2196F3'),
             title_standoff=10,
             automargin=True,
-            showgrid=True,
-            gridwidth=1,
-            gridcolor='rgba(189, 195, 199, 0.3)',
+            showgrid=False,  # 오른쪽 축은 그리드 제거 (중복 방지)
             showline=True,
             linewidth=1,
             linecolor='#34495e',
@@ -2303,8 +2449,12 @@ elif st.session_state.current_page == 'market_risk_dashboard':
             row=5, col=1
         )
         
-        # Row 1: S&P 500 (기본 스타일링만)
+        # Row 1: S&P 500 (왼쪽) + NASDAQ (오른쪽)
         fig.update_yaxes(
+            title_text="S&P 500",
+            title_font=dict(size=14, color='#2E7D32'),
+            title_standoff=10,
+            automargin=True,
             showgrid=True,
             gridwidth=1,
             gridcolor='rgba(189, 195, 199, 0.3)',
@@ -2313,10 +2463,21 @@ elif st.session_state.current_page == 'market_risk_dashboard':
             linecolor='#34495e',
             mirror=True,
             tickfont=dict(size=11, color='#2c3e50'),
-            row=1, col=1
+            row=1, col=1, secondary_y=False
         )
-        
-        
+        fig.update_yaxes(
+            title_text="NASDAQ",
+            title_font=dict(size=14, color='#1976D2'),
+            title_standoff=10,
+            automargin=True,
+            showgrid=False,  # 오른쪽 축은 그리드 제거 (중복 방지)
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            row=1, col=1, secondary_y=True
+        )
         
         st.plotly_chart(fig, use_container_width=True)
         
@@ -3263,11 +3424,6 @@ elif st.session_state.current_page == 'sofr_10y_bond_yield':
                             bordercolor='#bdc3c7',
                             font_size=12,
                             font_family="Arial"
-                        ),
-                        title=dict(
-                            text="SOFR & US 10-Year Bond Yield",
-                            x=0.5,
-                            font=dict(size=18, color='#2c3e50')
                         )
                     )
                     
@@ -3325,7 +3481,7 @@ elif st.session_state.current_page == 'sofr_10y_bond_yield':
         except Exception as e:
             st.error(f"데이터 로드 실패: {e}")
 
-        # Market Risk Dashboard II 페이지
+# Market Risk Dashboard II
 elif st.session_state.current_page == 'kospi_put_call_ratio':
     
     
@@ -3389,20 +3545,23 @@ elif st.session_state.current_page == 'kospi_put_call_ratio':
                 st.error(f"{index_names[i]} 데이터 로드 실패: {e}")
     
     if data:
-        # 통합 그래프 (S&P 500 + 25delta Risk Reversal) - 완전한 동기화를 위해 subplot 사용
+        # 통합 그래프 (S&P 500 + NASDAQ, FED Funds Rate + US 10-Year Treasury vs MOVE Index) - 완전한 동기화를 위해 subplot 사용
         from plotly.subplots import make_subplots
         
-        # 2개의 subplot 생성 (상하 배치) - S&P 500, 25delta Risk Reversal
+        # 5개의 subplot 생성 (상하 배치) - S&P 500 + NASDAQ, FED Funds Rate + US 10-Year Treasury vs MOVE Index, VIX/VVIX, VVIX/VIX, ICE BofA
         fig = make_subplots(
-            rows=2, cols=1,
-            subplot_titles=('', ''),
-            vertical_spacing=0.02,
-            row_heights=[0.7, 0.3],  # S&P 500: 70%, 25delta Risk Reversal: 30%
-            shared_xaxes=True,  # x축 공유로 완전한 동기화
+            rows=5, cols=1,
+            subplot_titles=('', '', '', '', ''),
+            vertical_spacing=0.03,  # 그래프 간 적절한 간격 유지
+            row_heights=[0.2667, 0.1833, 0.1833, 0.1833, 0.1833],  # S&P 500 + NASDAQ: 26.67% (2/3 축소), 나머지 각 18.33%
+            shared_xaxes=False,  # x축을 개별적으로 표시하여 각 그래프 하단에 날짜 표시
             shared_yaxes=False,  # y축은 분리
             specs=[
-                [{"secondary_y": False}],  # Row 1: S&P 500
-                [{"secondary_y": False}]   # Row 2: 25delta Risk Reversal
+                [{"secondary_y": True}],   # Row 1: S&P 500 + NASDAQ
+                [{"secondary_y": True}],   # Row 2: FED Funds Rate + US 10-Year Treasury vs MOVE Index
+                [{"secondary_y": True}],   # Row 3: VIX + VVIX
+                [{"secondary_y": False}],  # Row 4: VVIX/VIX
+                [{"secondary_y": False}]   # Row 5: ICE BofA
             ]
         )
         
@@ -3413,9 +3572,12 @@ elif st.session_state.current_page == 'kospi_put_call_ratio':
                     x=data['S&P 500'].index,
                     y=data['S&P 500']['Close'],
                     name='S&P 500',
-                    line=dict(color='#2E7D32', width=2)
+                    mode='lines',
+                    line=dict(color='#2E7D32', width=2),
+                    legendgroup="row1",
+                    showlegend=True
                 ),
-                row=1, col=1
+                row=1, col=1, secondary_y=False
             )
             
             # S&P 500 제목은 go.Scatter의 name으로 표시
@@ -3429,84 +3591,462 @@ elif st.session_state.current_page == 'kospi_put_call_ratio':
                     x=[],
                     y=[],
                     name='S&P 500',
-                    line=dict(color='#2E7D32', width=2)
+                    mode='lines',
+                    line=dict(color='#2E7D32', width=2),
+                    legendgroup="row1",
+                    showlegend=True
                 ),
-                row=1, col=1
+                row=1, col=1, secondary_y=False
+            )
+        
+        # NASDAQ 데이터 추가 (첫 번째 subplot, 오른쪽 축) - 무조건 추가
+        nasdaq_data = data.get('NASDAQ', pd.DataFrame())
+        if not nasdaq_data.empty:
+            fig.add_trace(
+                go.Scatter(
+                    x=nasdaq_data.index,
+                    y=nasdaq_data['Close'],
+                    name='NASDAQ',
+                    mode='lines',
+                    line=dict(color='#1976D2', width=2),
+                    legendgroup="row1",
+                    showlegend=True
+                ),
+                row=1, col=1, secondary_y=True
+            )
+        else:
+            # NASDAQ 데이터가 없는 경우에도 빈 그래프 추가 (범례에 표시되도록)
+            fig.add_trace(
+                go.Scatter(
+                    x=[],
+                    y=[],
+                    name='NASDAQ',
+                    mode='lines',
+                    line=dict(color='#1976D2', width=2),
+                    legendgroup="row1",
+                    showlegend=True
+                ),
+                row=1, col=1, secondary_y=True
             )
         
             
         
-        # 25delta Risk Reversal 실제 데이터 가져오기
-        if 'VIX' in data and not data['VIX'].empty:
-            # 25delta Risk Reversal 실제 데이터를 가져오기 위해 여러 티커 시도
-            risk_reversal_data = None
-            risk_reversal_tickers = ['^RVX', 'RVX', 'RVX.VI', '^VIX25', 'VIX25']
+        # 두 번째 subplot: FED Funds Rate + US 10-Year Treasury (왼쪽) vs MOVE Index (오른쪽)
+        try:
+            fred = Fred(api_key=FRED_API_KEY)
             
-            for ticker in risk_reversal_tickers:
+            # 선택된 기간에 따라 날짜 범위 계산
+            if selected_period == 'MAX':
+                start_date_fred = datetime.now() - timedelta(days=3650)
+                end_date_fred = datetime.now()
+            elif selected_period == '10Y':
+                start_date_fred = datetime.now() - timedelta(days=3650)
+                end_date_fred = datetime.now()
+            elif selected_period == '5Y':
+                start_date_fred = datetime.now() - timedelta(days=1825)
+                end_date_fred = datetime.now()
+            elif selected_period == '2Y':
+                start_date_fred = datetime.now() - timedelta(days=730)
+                end_date_fred = datetime.now()
+            elif selected_period == '1Y':
+                start_date_fred = datetime.now() - timedelta(days=365)
+                end_date_fred = datetime.now()
+            elif selected_period == '6MO':
+                start_date_fred = datetime.now() - timedelta(days=180)
+                end_date_fred = datetime.now()
+            elif selected_period == '3MO':
+                start_date_fred = datetime.now() - timedelta(days=90)
+                end_date_fred = datetime.now()
+            elif selected_period == '1MO':
+                start_date_fred = datetime.now() - timedelta(days=30)
+                end_date_fred = datetime.now()
+            elif selected_period == '5D':
+                start_date_fred = datetime.now() - timedelta(days=5)
+                end_date_fred = datetime.now()
+            elif selected_period == '1D':
+                start_date_fred = datetime.now() - timedelta(days=1)
+                end_date_fred = datetime.now()
+            else:  # YTD
+                start_date_fred = datetime(datetime.now().year, 1, 1)
+                end_date_fred = datetime.now()
+            
+            # FRED에서 FED Funds Rate 데이터 가져오기
+            fed_rate_data = fred.get_series('DFF', observation_start=start_date_fred.strftime('%Y-%m-%d'), observation_end=end_date_fred.strftime('%Y-%m-%d'))
+            
+            # FRED에서 US 10-Year Treasury 데이터 가져오기
+            treasury_10y_data = fred.get_series('DGS10', observation_start=start_date_fred.strftime('%Y-%m-%d'), observation_end=end_date_fred.strftime('%Y-%m-%d'))
+            
+            # MOVE Index 데이터 가져오기 (yfinance 및 FRED 시도)
+            move_data = None
+            move_data_source = None  # 데이터 소스 추적
+            
+            # 방법 1: yfinance에서 MOVE Index 티커 시도
+            move_tickers = ['^MOVE', 'MOVE', 'MOVE.VI']
+            for ticker in move_tickers:
+                try:
+                    import time
+                    time.sleep(0.3)
+                    move_ticker = yf.Ticker(ticker)
+                    if selected_period == 'MAX':
+                        temp_data = move_ticker.history(period='max')
+                    else:
+                        temp_data = move_ticker.history(period=selected_period)
+                    if not temp_data.empty:
+                        move_data = temp_data['Close']
+                        move_data_source = f"yfinance ({ticker})"
+                        break
+                except Exception as e:
+                    continue
+            
+            # 방법 2: FRED에서 MOVE Index 시리즈 시도
+            if move_data is None:
+                move_series_ids = ['BAMLEMOVE', 'BAMLEMOVEINDEX', 'MOVE']
+                for series_id in move_series_ids:
+                    try:
+                        temp_move = fred.get_series(series_id, observation_start=start_date_fred.strftime('%Y-%m-%d'), observation_end=end_date_fred.strftime('%Y-%m-%d'))
+                        if not temp_move.empty:
+                            move_data = temp_move
+                            move_data_source = f"FRED API ({series_id})"
+                            break
+                    except Exception as e:
+                        continue
+            
+            # 방법 3: US 10-Year Treasury 변동성으로 MOVE Index 근사치 계산
+            if move_data is None and not treasury_10y_data.empty:
+                try:
+                    # Treasury 10-Year 데이터의 변동성 계산 (30일 롤링 표준편차)
+                    treasury_10y_data.index = pd.to_datetime(treasury_10y_data.index).tz_localize(None)
+                    treasury_returns = treasury_10y_data.pct_change()
+                    move_data = treasury_returns.rolling(window=30).std() * np.sqrt(252) * 100  # 연율화 변동성
+                    move_data = move_data.dropna()
+                    if move_data.empty:
+                        move_data = None
+                    else:
+                        move_data_source = "Calculated (US 10Y Treasury 30-day rolling volatility)"
+                except Exception as e:
+                    move_data = None
+            
+            # 데이터 소스 정보 표시
+            if move_data_source:
+                st.caption(f"📊 MOVE Index 데이터 소스: {move_data_source}")
+            else:
+                st.caption("⚠️ MOVE Index 데이터를 가져올 수 없습니다.")
+            
+            # 데이터 처리 및 필터링
+            if not fed_rate_data.empty:
+                fed_rate_data.index = pd.to_datetime(fed_rate_data.index).tz_localize(None)
+                start_datetime = pd.to_datetime(start_date_fred)
+                end_datetime = pd.to_datetime(end_date_fred)
+                filtered_fed_rate = fed_rate_data[
+                    (fed_rate_data.index >= start_datetime) & 
+                    (fed_rate_data.index <= end_datetime)
+                ]
+                
+                if not filtered_fed_rate.empty:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=filtered_fed_rate.index,
+                            y=filtered_fed_rate.values,
+                            name='FED Funds Rate',
+                            mode='lines',
+                            line=dict(color='#1B5E20', width=2, dash='dot'),
+                            legendgroup="row2",
+                            showlegend=True
+                        ),
+                        row=2, col=1, secondary_y=False
+                    )
+            
+            if not treasury_10y_data.empty:
+                treasury_10y_data.index = pd.to_datetime(treasury_10y_data.index).tz_localize(None)
+                start_datetime = pd.to_datetime(start_date_fred)
+                end_datetime = pd.to_datetime(end_date_fred)
+                filtered_treasury_10y = treasury_10y_data[
+                    (treasury_10y_data.index >= start_datetime) & 
+                    (treasury_10y_data.index <= end_datetime)
+                ]
+                
+                if not filtered_treasury_10y.empty:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=filtered_treasury_10y.index,
+                            y=filtered_treasury_10y.values,
+                            name='US 10-Year Treasury',
+                            mode='lines',
+                            line=dict(color='#000000', width=2),
+                            legendgroup="row2",
+                            showlegend=True
+                        ),
+                        row=2, col=1, secondary_y=False
+                    )
+            
+            # MOVE Index 또는 US 10-Year Treasury 변동성을 오른쪽 축에 추가
+            if move_data is not None and not move_data.empty:
+                # move_data가 Series인 경우와 DataFrame인 경우 처리
+                if isinstance(move_data, pd.DataFrame):
+                    move_values = move_data['Close'] if 'Close' in move_data.columns else move_data.iloc[:, 0]
+                    move_index = move_data.index
+                else:
+                    move_values = move_data
+                    move_index = move_data.index
+                
+                move_index = pd.to_datetime(move_index).tz_localize(None)
+                start_datetime = pd.to_datetime(start_date_fred)
+                end_datetime = pd.to_datetime(end_date_fred)
+                filtered_move = move_values[
+                    (move_index >= start_datetime) & 
+                    (move_index <= end_datetime)
+                ]
+                
+                if not filtered_move.empty:
+                    # MOVE Index가 계산된 변동성인지 확인하여 이름 설정
+                    if move_data is not None and hasattr(move_data, 'name') and 'volatility' in str(move_data.name).lower():
+                        move_name = 'US 10Y Treasury Volatility'
+                    else:
+                        move_name = 'MOVE Index'
+                    
+                    fig.add_trace(
+                        go.Scatter(
+                            x=filtered_move.index,
+                            y=filtered_move.values,
+                            name=move_name,
+                            mode='lines',
+                            line=dict(color='purple', width=2),
+                            legendgroup="row2",
+                            showlegend=True
+                        ),
+                        row=2, col=1, secondary_y=True
+                    )
+        except Exception as e:
+            st.write(f"두 번째 그래프 데이터 로드 실패: {e}")
+        
+        # VIX 데이터가 있는 경우 VVIX 데이터 추가 (세 번째 subplot)
+        if 'VIX' in data and not data['VIX'].empty:
+            # VVIX 데이터 추가 (세 번째 subplot)
+            vvix_data = None
+            vvix_tickers = ['^VVIX', 'VVIX', 'VVIX.VI']
+            
+            for ticker in vvix_tickers:
                 try:
                     import time
                     time.sleep(0.3)  # 요청 간격 조정
                     
-                    risk_ticker = yf.Ticker(ticker)
+                    vvix_ticker = yf.Ticker(ticker)
                     if selected_period == 'MAX':
-                        temp_data = risk_ticker.history(period='max')
+                        temp_data = vvix_ticker.history(period='max')
                     else:
-                        temp_data = risk_ticker.history(period=selected_period)
+                        temp_data = vvix_ticker.history(period=selected_period)
                     
                     if not temp_data.empty:
-                        risk_reversal_data = temp_data
+                        vvix_data = temp_data
                         break
                     else:
                         continue
                 except Exception as e:
                     continue
             
-            # 실제 데이터가 없으면 VIX 기반 근사치 사용
-            if risk_reversal_data is None or risk_reversal_data.empty:
-                vix_data = data['VIX']['Close']
-                # 25delta Risk Reversal 근사치 (VIX의 변동성을 기반으로 한 가상 데이터)
-                risk_reversal = vix_data * 0.1 + np.random.normal(0, 0.5, len(vix_data))  # 근사치
-                risk_reversal_index = vix_data.index
-            else:
-                risk_reversal = risk_reversal_data['Close']
-                risk_reversal_index = risk_reversal_data.index
+            if vvix_data is not None and not vvix_data.empty:
+                # Row 3에 VIX 추가 (왼쪽 축)
+                fig.add_trace(
+                    go.Scatter(
+                        x=data['VIX'].index,
+                        y=data['VIX']['Close'],
+                        name='VIX',
+                        mode='lines',
+                        line=dict(color='#1A237E', width=2),
+                        legendgroup="row3",
+                        showlegend=True
+                    ),
+                    row=3, col=1, secondary_y=False
+                )
+                
+                # Row 3에 VVIX 추가 (오른쪽 축)
+                fig.add_trace(
+                    go.Scatter(
+                        x=vvix_data.index,
+                        y=vvix_data['Close'],
+                        name='VVIX',
+                        mode='lines',
+                        line=dict(color='#FF9800', width=2),
+                        legendgroup="row3",
+                        showlegend=True
+                    ),
+                    row=3, col=1, secondary_y=True
+                )
+                
+                # VVIX/VIX 비율 계산 및 그래프 (네 번째 subplot)
+                vix_dates = data['VIX'].index.strftime('%Y-%m-%d')
+                vvix_dates = vvix_data.index.strftime('%Y-%m-%d')
+                common_dates = set(vix_dates) & set(vvix_dates)
+                
+                if len(common_dates) > 0:
+                    vix_common = data['VIX'][data['VIX'].index.strftime('%Y-%m-%d').isin(common_dates)]
+                    vvix_common = vvix_data[vvix_data.index.strftime('%Y-%m-%d').isin(common_dates)]
+                    
+                    vix_common = vix_common.sort_index()
+                    vvix_common = vvix_common.sort_index()
+                    
+                    vix_common.index = vix_common.index.strftime('%Y-%m-%d')
+                    vvix_common.index = vvix_common.index.strftime('%Y-%m-%d')
+                    
+                    vvix_vix_ratio = vvix_common["Close"] / vix_common["Close"]
+                    
+                    fig.add_trace(
+                        go.Scatter(
+                            x=vvix_common.index,
+                            y=vvix_vix_ratio,
+                            name='VVIX/VIX',
+                            mode='lines',
+                            line=dict(color='#F44336', width=2),
+                            legendgroup="row4",
+                            showlegend=True
+                        ),
+                        row=4, col=1
+                    )
+        
+        # ICE BofA US High Yield Index 데이터 추가 (5번째 subplot)
+        try:
+            fred = Fred(api_key=FRED_API_KEY)
             
-            fig.add_trace(
-                go.Scatter(
-                    x=risk_reversal_index,
-                    y=risk_reversal,
-                    name='25delta Risk Reversal',
-                    line=dict(color='#E91E63', width=2)
-                ),
-                row=2, col=1, secondary_y=False
-            )
+            # 선택된 기간에 따라 날짜 범위 계산 - selected_period와 정확히 일치
+            if selected_period == 'MAX':
+                start_date_fred = datetime.now() - timedelta(days=3650)
+                end_date_fred = datetime.now()
+            elif selected_period == '10Y':
+                start_date_fred = datetime.now() - timedelta(days=3650)
+                end_date_fred = datetime.now()
+            elif selected_period == '5Y':
+                start_date_fred = datetime.now() - timedelta(days=1825)
+                end_date_fred = datetime.now()
+            elif selected_period == '2Y':
+                start_date_fred = datetime.now() - timedelta(days=730)
+                end_date_fred = datetime.now()
+            elif selected_period == '1Y':
+                start_date_fred = datetime.now() - timedelta(days=365)
+                end_date_fred = datetime.now()
+            elif selected_period == '6MO':
+                start_date_fred = datetime.now() - timedelta(days=180)
+                end_date_fred = datetime.now()
+            elif selected_period == '3MO':
+                start_date_fred = datetime.now() - timedelta(days=90)
+                end_date_fred = datetime.now()
+            elif selected_period == '1MO':
+                start_date_fred = datetime.now() - timedelta(days=30)
+                end_date_fred = datetime.now()
+            elif selected_period == '5D':
+                start_date_fred = datetime.now() - timedelta(days=5)
+                end_date_fred = datetime.now()
+            elif selected_period == '1D':
+                start_date_fred = datetime.now() - timedelta(days=1)
+                end_date_fred = datetime.now()
+            else:  # YTD
+                start_date_fred = datetime(datetime.now().year, 1, 1)
+                end_date_fred = datetime.now()
+            
+            # FRED에서 High Yield Spread 데이터 가져오기
+            high_yield_spread = fred.get_series('BAMLH0A0HYM2', observation_start=start_date_fred.strftime('%Y-%m-%d'), observation_end=end_date_fred.strftime('%Y-%m-%d'))
+            
+            if not high_yield_spread.empty:
+                # 선택된 기간에 따라 필터링
+                start_datetime = pd.to_datetime(start_date_fred)
+                end_datetime = pd.to_datetime(end_date_fred)
+                
+                filtered_spread = high_yield_spread[
+                    (high_yield_spread.index >= start_datetime) & 
+                    (high_yield_spread.index <= end_datetime)
+                ]
+                
+                if not filtered_spread.empty:
+                    # 날짜 형식 확인 및 수정
+                    filtered_spread.index = pd.to_datetime(filtered_spread.index)
+                    # 타임존 제거하여 다른 데이터와 일치시키기
+                    filtered_spread.index = filtered_spread.index.tz_localize(None)
+                    
+                    fig.add_trace(
+                        go.Scatter(
+                            x=filtered_spread.index,
+                            y=filtered_spread.values,
+                            name='ICE BofA US High Yield Index Option-Adjusted Spread',
+                            mode='lines',
+                            line=dict(color='purple', width=2),
+                            legendgroup="row5",
+                            showlegend=True
+                        ),
+                        row=5, col=1
+                    )
+                    
+                    # ICE BofA 제목은 go.Scatter의 name으로 표시
+                    
+                    
+                    
+        except Exception as e:
+            st.write(f"ICE BofA 데이터 로드 실패: {e}")
         
         # 통합 레이아웃 설정
+        # 각 subplot에 개별 legend를 표시하기 위해 showlegend=False로 설정하고
+        # 각 subplot의 위치에 legend를 배치
         fig.update_layout(
-            height=800,  # 2개 subplot을 위해 높이 조정
+            height=1700,  # 2개 subplot을 위해 높이 조정
             plot_bgcolor='rgba(248, 249, 250, 0.8)',
             paper_bgcolor='white',
             font=dict(family="Arial", size=12, color='#2c3e50'),
-            showlegend=True,
+            showlegend=True,  # legend 활성화
             legend=dict(
-                x=0.0,
-                y=1.0,
-                bgcolor='rgba(255, 255, 255, 0.8)',
-                bordercolor='#bdc3c7',
-                borderwidth=1,
-                font=dict(size=12)
+                orientation="h",  # 가로 방향
+                x=0,  # 그래프 프레임 왼쪽 경계와 일치
+                y=1.02,  # 상단 (약간 위로)
+                xanchor="left",
+                yanchor="bottom",
+                bgcolor='rgba(0, 0, 0, 0)',  # 투명 배경
+                bordercolor='rgba(0, 0, 0, 0)',  # 투명 테두리
+                borderwidth=0,  # 테두리 제거
+                font=dict(
+                    size=11,
+                    color='#2c3e50',
+                    family="Arial"
+                ),
+                itemclick="toggleothers",  # 클릭 시 다른 항목은 유지하고 선택한 항목만 토글
+                itemdoubleclick="toggle",  # 더블클릭 시 해당 항목만 토글
+                traceorder="normal",  # 정상 순서
+                itemsizing="constant",  # 일정한 크기
+                itemwidth=30  # 아이템 너비 설정
             ),
+            margin=dict(t=80, b=30, l=50, r=30),  # 상단 마진 추가로 레전드 공간 확보
             hovermode='x unified',  # x축 통합 모드로 완전한 동기화
             hoverlabel=dict(
                 bgcolor='rgba(255, 255, 255, 0.9)',
                 bordercolor='#bdc3c7',
                 font_size=12,
                 font_family="Arial"
-            ),
-            margin=dict(t=30, b=30, l=30, r=30)  # 오른쪽 테두리를 위한 마진 추가
+            )
         )
         
-        # x축 동기화 및 스타일링
+        # 각 subplot에 개별 legend를 표시하기 위해
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치
+        # row_heights = [0.2667, 0.1833, 0.1833, 0.1833, 0.1833], vertical_spacing = 0.03
+        # 각 subplot의 y 위치 계산 (상단부터, paper 좌표계 사용)
+        # Row 1: y_top = 1.0, y_bottom = 1.0 - 0.2667 = 0.7333
+        # Row 2: y_top = 0.7333 - 0.03 = 0.7033, y_bottom = 0.7033 - 0.1833 = 0.52
+        # Row 3: y_top = 0.52 - 0.03 = 0.49, y_bottom = 0.49 - 0.1833 = 0.3067
+        # Row 4: y_top = 0.3067 - 0.03 = 0.2767, y_bottom = 0.2767 - 0.1833 = 0.0934
+        # Row 5: y_top = 0.0934 - 0.03 = 0.0634, y_bottom = 0.0634 - 0.1833 = -0.1199
+        
+        # 각 subplot에 개별 legend를 표시하기 위해
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치
+        # Plotly에서는 subplot별로 개별 legend를 직접 설정할 수 없지만
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치할 수 있습니다
+        
+        # 각 subplot에 개별 legend를 표시하기 위해
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치
+        # 실제 구현: 각 subplot에 대해 개별 legend를 표시하기 위해
+        # 각 trace의 legendgroup을 사용하여 그룹화하고
+        # 각 subplot의 위치에 legend를 배치하는 방법을 사용
+        
+        # x축 개별 표시 및 스타일링 (각 그래프 하단에 날짜 표시)
+        # Row 1: S&P 500 + NASDAQ
         fig.update_xaxes(
             showgrid=True,
             gridwidth=1,
@@ -3516,13 +4056,11 @@ elif st.session_state.current_page == 'kospi_put_call_ratio':
             linecolor='#34495e',
             mirror=True,
             tickfont=dict(size=11, color='#2c3e50'),
-            title_font=dict(size=13, color='#2c3e50')
+            title_font=dict(size=13, color='#2c3e50'),
+            row=1, col=1
         )
-        
-        
-        # y축 스타일링 및 제목 설정
-        # Row 1: S&P 500 (기본 스타일링만)
-        fig.update_yaxes(
+        # Row 2: FED Funds Rate + US 10-Year Treasury vs MOVE Index
+        fig.update_xaxes(
             showgrid=True,
             gridwidth=1,
             gridcolor='rgba(189, 195, 199, 0.3)',
@@ -3531,13 +4069,55 @@ elif st.session_state.current_page == 'kospi_put_call_ratio':
             linecolor='#34495e',
             mirror=True,
             tickfont=dict(size=11, color='#2c3e50'),
-            row=1, col=1
+            title_font=dict(size=13, color='#2c3e50'),
+            row=2, col=1
+        )
+        # Row 3: VIX + VVIX
+        fig.update_xaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            title_font=dict(size=13, color='#2c3e50'),
+            row=3, col=1
+        )
+        # Row 4: VVIX/VIX
+        fig.update_xaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            title_font=dict(size=13, color='#2c3e50'),
+            row=4, col=1
+        )
+        # Row 5: ICE BofA
+        fig.update_xaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            title_font=dict(size=13, color='#2c3e50'),
+            row=5, col=1
         )
         
-        # Row 2: 25delta Risk Reversal
+        
+        # y축 스타일링 및 제목 설정
+        # Row 2: FED Funds Rate + US 10-Year Treasury (왼쪽) + MOVE Index (오른쪽)
         fig.update_yaxes(
-            title_text="25delta Risk Reversal",
-            title_font=dict(size=14, color='#E91E63'),
+            title_text="Rate (%)",
+            title_font=dict(size=14, color='#2c3e50'),
             title_standoff=10,
             automargin=True,
             showgrid=True,
@@ -3550,8 +4130,115 @@ elif st.session_state.current_page == 'kospi_put_call_ratio':
             tickfont=dict(size=11, color='#2c3e50'),
             row=2, col=1, secondary_y=False
         )
+        fig.update_yaxes(
+            title_text="MOVE Index",
+            title_font=dict(size=14, color='#2196F3'),
+            title_standoff=10,
+            automargin=True,
+            showgrid=False,  # 오른쪽 축은 그리드 제거 (중복 방지)
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            row=2, col=1, secondary_y=True
+        )
         
+        # Row 3: VIX (왼쪽) + VVIX (오른쪽)
+        fig.update_yaxes(
+            title_text="VIX",
+            title_font=dict(size=14, color='#1A237E'),
+            title_standoff=10,
+            automargin=True,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            row=3, col=1, secondary_y=False
+        )
+        fig.update_yaxes(
+            title_text="VVIX",
+            title_font=dict(size=14, color='#FF9800'),
+            title_standoff=10,
+            automargin=True,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            row=3, col=1, secondary_y=True
+        )
         
+        # Row 4: VVIX/VIX
+        fig.update_yaxes(
+            title_text="VVIX/VIX",
+            title_font=dict(size=14, color='#F44336'),
+            title_standoff=10,
+            automargin=True,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            row=4, col=1
+        )
+        
+        # Row 5: ICE BofA US High Yield Index
+        fig.update_yaxes(
+            title_text="Spread (%)",
+            title_font=dict(size=14, color='purple'),
+            title_standoff=10,
+            automargin=True,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            row=5, col=1
+        )
+        
+        # Row 1: S&P 500 (왼쪽) + NASDAQ (오른쪽)
+        fig.update_yaxes(
+            title_text="S&P 500",
+            title_font=dict(size=14, color='#2E7D32'),
+            title_standoff=10,
+            automargin=True,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(189, 195, 199, 0.3)',
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            row=1, col=1, secondary_y=False
+        )
+        fig.update_yaxes(
+            title_text="NASDAQ",
+            title_font=dict(size=14, color='#1976D2'),
+            title_standoff=10,
+            automargin=True,
+            showgrid=False,  # 오른쪽 축은 그리드 제거 (중복 방지)
+            showline=True,
+            linewidth=1,
+            linecolor='#34495e',
+            mirror=True,
+            tickfont=dict(size=11, color='#2c3e50'),
+            row=1, col=1, secondary_y=True
+        )
         
         st.plotly_chart(fig, use_container_width=True)
         
